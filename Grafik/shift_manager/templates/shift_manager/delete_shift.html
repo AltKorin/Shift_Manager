@@ -1,0 +1,48 @@
+{% extends 'shift_manager/base.html' %}
+
+{% block title %}Usuń zmianę{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card mt-4">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-trash"></i> Potwierdź usunięcie zmiany</h5>
+            </div>
+            <div class="card-body">
+                <p>Czy na pewno chcesz usunąć tę zmianę?</p>
+
+                <ul class="list-group mb-3">
+                    <li class="list-group-item">
+                        <strong>Pracownik:</strong> {{ shift.employee.user.get_full_name }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Data:</strong> {{ shift.date|date:"d.m.Y" }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Godziny:</strong> {{ shift.start_time|time:"H:i" }} – {{ shift.end_time|time:"H:i" }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Typ zmiany:</strong> {{ shift.get_shift_type_display }}
+                    </li>
+                    {% if shift.notes %}
+                    <li class="list-group-item">
+                        <strong>Uwagi:</strong> {{ shift.notes }}
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Usuń zmianę
+                    </button>
+                    <a href="{% url 'schedule' %}" class="btn btn-secondary ms-2">
+                        Anuluj
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

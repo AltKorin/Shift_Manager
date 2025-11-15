@@ -1,0 +1,121 @@
+{% extends 'shift_manager/base.html' %}
+
+{% block title %}Grafik - System Grafików{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <a href="?date={{ prev_week|date:'Y-m-d' }}" class="btn btn-light btn-sm">
+                    <i class="bi bi-chevron-left"></i> Poprzedni tydzień
+                </a>
+            </div>
+            <div class="col-md-4 text-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar3"></i> 
+                    Tydzień {{ start_of_week|date:"d.m" }} - {{ end_of_week|date:"d.m.Y" }}
+                </h5>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="?date={{ next_week|date:'Y-m-d' }}" class="btn btn-light btn-sm">
+                    Następny tydzień <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 150px;">Data</th>
+                        <th>Zmiany</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for date, day_data in week_schedule.items %}
+                    <tr>
+                        <td class="align-top">
+                            <strong>{{ date|date:"l" }}</strong><br>
+                            {{ date|date:"d.m.Y" }}
+                            {% if date == today %}
+                            <span class="badge bg-primary">Dzisiaj</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if day_data.shifts %}
+                                {% for shift in day_data.shifts %}
+                                <div class="card shift-card shift-{{ shift.shift_type }} mb-2">
+                                    <div class="card-body py-2">
+                                        <div class="row align-items-center">
+                                            {% if employee.is_supervisor %}
+                                            <div class="col-md-3">
+                                                <strong>{{ shift.employee.user.get_full_name }}</strong>
+                                            </div>
+                                            {% endif %}
+                                            <div class="col-md-3">
+                                                <span class="badge bg-secondary">{{ shift.get_shift_type_display }}</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <i class="bi bi-clock"></i> {{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}
+                                            </div>
+
+                                            {% if employee.is_supervisor %}
+                                                <div class="col-md-3 text-end">
+                                                    {# przełożony może usunąć każdą zmianę w swoim zespole #}
+                                                    {% if shift.employee == employee %}
+                                                    <a href="{% url 'request_change_for_shift' shift.id %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-pencil"></i> Zmień
+                                                    </a>
+                                                    {% endif %}
+                                                    <a href="{% url 'delete_shift' shift.id %}" class="btn btn-sm btn-outline-danger ms-1">
+                                                        <i class="bi bi-trash"></i>
+                                                    </a>
+                                                </div>
+                                            {% elif shift.employee == employee %}
+                                                <div class="col-md-3 text-end">
+                                                    <a href="{% url 'request_change_for_shift' shift.id %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-pencil"></i> Zmień
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        {% if shift.notes %}
+                                        <div class="row mt-1">
+                                            <div class="col-12">
+                                                <small class="text-muted"><i class="bi bi-info-circle"></i> {{ shift.notes }}</small>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">Brak zmian</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between">
+            <div>
+                <strong>Legenda:</strong>
+                <span class="badge bg-warning text-dark ms-2">Poranna</span>
+                <span class="badge bg-danger text-dark ms-2" style="background-color: #fd7e14 !important;">Popołudniowa</span>
+                <span class="badge text-white ms-2" style="background-color: #6610f2 !important;">Nocna</span>
+                <span class="badge text-white ms-2" style="background-color: #20c997 !important;">Cały dzień</span>
+            </div>
+            <div>
+                <a href="{% url 'request_change' %}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Nowy wniosek
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

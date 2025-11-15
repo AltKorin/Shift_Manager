@@ -1,0 +1,148 @@
+{% extends 'shift_manager/base.html' %}
+
+{% block title %}Wniosek o zmianę - System Grafików{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark-plus"></i> 
+                    {% if shift %}
+                    Wniosek o zmianę dla zmiany {{ shift.date|date:"d.m.Y" }}
+                    {% else %}
+                    Nowy wniosek o zmianę
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if shift %}
+                <div class="alert alert-info">
+                    <strong>Aktualna zmiana:</strong><br>
+                    Data: {{ shift.date|date:"d.m.Y (l)" }}<br>
+                    Typ: {{ shift.get_shift_type_display }}<br>
+                    Godziny: {{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}
+                </div>
+                {% endif %}
+
+                <form method="post" id="changeRequestForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        {{ form.request_type.label_tag }}
+                        {{ form.request_type }}
+                        {% if form.request_type.errors %}
+                        <div class="text-danger">{{ form.request_type.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div id="swap-fields" style="display: none;">
+                        <div class="mb-3">
+                            {{ form.swap_with_employee.label_tag }}
+                            {{ form.swap_with_employee }}
+                            {% if form.swap_with_employee.errors %}
+                            <div class="text-danger">{{ form.swap_with_employee.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.swap_shift.label_tag }}
+                            {{ form.swap_shift }}
+                            <small class="form-text text-muted">Wybierz najpierw pracownika, aby zobaczyć jego zmiany</small>
+                            {% if form.swap_shift.errors %}
+                            <div class="text-danger">{{ form.swap_shift.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div id="datetime-fields" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.new_date.label_tag }}
+                                {{ form.new_date }}
+                                {% if form.new_date.errors %}
+                                <div class="text-danger">{{ form.new_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.new_shift_type.label_tag }}
+                                {{ form.new_shift_type }}
+                                {% if form.new_shift_type.errors %}
+                                <div class="text-danger">{{ form.new_shift_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.new_start_time.label_tag }}
+                                {{ form.new_start_time }}
+                                {% if form.new_start_time.errors %}
+                                <div class="text-danger">{{ form.new_start_time.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.new_end_time.label_tag }}
+                                {{ form.new_end_time }}
+                                {% if form.new_end_time.errors %}
+                                <div class="text-danger">{{ form.new_end_time.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.reason.label_tag }}
+                        {{ form.reason }}
+                        {% if form.reason.errors %}
+                        <div class="text-danger">{{ form.reason.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Anuluj
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Wyślij wniosek
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const requestTypeSelect = document.querySelector('#id_request_type');
+    const swapFields = document.querySelector('#swap-fields');
+    const datetimeFields = document.querySelector('#datetime-fields');
+    
+    function updateVisibleFields() {
+        const requestType = requestTypeSelect.value;
+        
+        // Ukryj wszystkie
+        swapFields.style.display = 'none';
+        datetimeFields.style.display = 'none';
+        
+        // Pokaż odpowiednie
+        if (requestType === 'swap') {
+            swapFields.style.display = 'block';
+        } else if (requestType === 'modify' || requestType === 'add') {
+            datetimeFields.style.display = 'block';
+        }
+    }
+    
+    requestTypeSelect.addEventListener('change', updateVisibleFields);
+    updateVisibleFields(); // Uruchom przy ładowaniu
+});
+</script>
+{% endblock %}

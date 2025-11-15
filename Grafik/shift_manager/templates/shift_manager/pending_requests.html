@@ -1,0 +1,141 @@
+{% extends 'shift_manager/base.html' %}
+
+{% block title %}Wnioski do rozpatrzenia - System Grafików{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-warning">
+        <h5 class="mb-0">
+            <i class="bi bi-clipboard-check"></i> Wnioski oczekujące na rozpatrzenie ({{ requests.count }})
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if requests %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Pracownik</th>
+                        <th>Stanowisko</th>
+                        <th>Typ wniosku</th>
+                        <th>Zmiana</th>
+                        <th>Data utworzenia</th>
+                        <th>Akcja</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in requests %}
+                    <tr>
+                        <td>
+                            <strong>{{ request.employee.user.get_full_name }}</strong>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ request.employee.position }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-info text-dark">
+                                {{ request.get_request_type_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if request.shift %}
+                                {{ request.shift.date|date:"d.m.Y" }}<br>
+                                <small class="text-muted">
+                                    {{ request.shift.get_shift_type_display }}<br>
+                                    {{ request.shift.start_time|time:"H:i" }} - {{ request.shift.end_time|time:"H:i" }}
+                                </small>
+                            {% else %}
+                                <span class="text-muted">Nowa zmiana</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ request.created_at|date:"d.m.Y" }}<br>
+                            <small class="text-muted">{{ request.created_at|time:"H:i" }}</small>
+                        </td>
+                        <td>
+                            <a href="{% url 'review_request' request.id %}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i> Rozpatrz
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-info" 
+                                    data-bs-toggle="modal" data-bs-target="#quickView{{ request.id }}">
+                                <i class="bi bi-info-circle"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle"></i> Brak wniosków oczekujących na rozpatrzenie. Wszystko rozpatrzone!
+        </div>
+        {% endif %}
+
+        <div class="mt-3">
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Wróć do panelu
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Quick view modals -->
+{% for request in requests %}
+<div class="modal fade" id="quickView{{ request.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Wniosek od {{ request.employee.user.get_full_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Typ:</strong> {{ request.get_request_type_display }}</p>
+                
+                {% if request.shift %}
+                <p>
+                    <strong>Zmiana:</strong><br>
+                    {{ request.shift.date|date:"d.m.Y" }} - {{ request.shift.get_shift_type_display }}<br>
+                    {{ request.shift.start_time|time:"H:i" }} - {{ request.shift.end_time|time:"H:i" }}
+                </p>
+                {% endif %}
+
+                {% if request.request_type == 'swap' and request.swap_with_employee %}
+                <p>
+                    <strong>Zamiana z:</strong> {{ request.swap_with_employee.user.get_full_name }}<br>
+                    {% if request.swap_shift %}
+                    <strong>Na zmianę:</strong> {{ request.swap_shift.date|date:"d.m.Y" }} 
+                    ({{ request.swap_shift.get_shift_type_display }})
+                    {% endif %}
+                </p>
+                {% endif %}
+
+                {% if request.new_date or request.new_start_time %}
+                <p>
+                    <strong>Proponowane zmiany:</strong><br>
+                    {% if request.new_date %}Data: {{ request.new_date|date:"d.m.Y" }}<br>{% endif %}
+                    {% if request.new_shift_type %}Typ: {{ request.get_new_shift_type_display }}<br>{% endif %}
+                    {% if request.new_start_time %}
+                    Godziny: {{ request.new_start_time|time:"H:i" }} - {{ request.new_end_time|time:"H:i" }}
+                    {% endif %}
+                </p>
+                {% endif %}
+
+                <div class="card">
+                    <div class="card-header">Uzasadnienie</div>
+                    <div class="card-body">
+                        {{ request.reason|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+                <a href="{% url 'review_request' request.id %}" class="btn btn-primary">
+                    <i class="bi bi-clipboard-check"></i> Rozpatrz wniosek
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

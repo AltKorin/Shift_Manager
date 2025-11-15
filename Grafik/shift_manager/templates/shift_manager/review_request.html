@@ -1,0 +1,132 @@
+{% extends 'shift_manager/base.html' %}
+
+{% block title %}Rozpatrywanie wniosku - System Grafików{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">
+                    <i class="bi bi-clipboard-check"></i> Rozpatrywanie wniosku
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Pracownik:</strong><br>
+                        {{ change_request.employee.user.get_full_name }}<br>
+                        <small class="text-muted">{{ change_request.employee.position }}</small>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <strong>Data wniosku:</strong><br>
+                        {{ change_request.created_at|date:"d.m.Y H:i" }}
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6><strong>Typ wniosku:</strong> {{ change_request.get_request_type_display }}</h6>
+                </div>
+
+                {% if change_request.shift %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <strong>Aktualna zmiana:</strong>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Data:</strong> {{ change_request.shift.date|date:"d.m.Y (l)" }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Typ:</strong> {{ change_request.shift.get_shift_type_display }}
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <strong>Godziny:</strong> {{ change_request.shift.start_time|time:"H:i" }} - {{ change_request.shift.end_time|time:"H:i" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if change_request.request_type == 'swap' %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <strong>Proponowana zamiana:</strong>
+                    </div>
+                    <div class="card-body">
+                        {% if change_request.swap_with_employee %}
+                        <p><strong>Zamiana z:</strong> {{ change_request.swap_with_employee.user.get_full_name }}</p>
+                        {% endif %}
+                        {% if change_request.swap_shift %}
+                        <p><strong>Zmiana do zamiany:</strong><br>
+                        {{ change_request.swap_shift.date|date:"d.m.Y" }} 
+                        ({{ change_request.swap_shift.get_shift_type_display }})
+                        {{ change_request.swap_shift.start_time|time:"H:i" }} - {{ change_request.swap_shift.end_time|time:"H:i" }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if change_request.request_type == 'modify' or change_request.request_type == 'add' %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <strong>
+                            {% if change_request.request_type == 'modify' %}Proponowane zmiany:{% else %}Nowa zmiana:{% endif %}
+                        </strong>
+                    </div>
+                    <div class="card-body">
+                        {% if change_request.new_date %}
+                        <p><strong>Nowa data:</strong> {{ change_request.new_date|date:"d.m.Y (l)" }}</p>
+                        {% endif %}
+                        {% if change_request.new_shift_type %}
+                        <p><strong>Nowy typ:</strong> {{ change_request.get_new_shift_type_display }}</p>
+                        {% endif %}
+                        {% if change_request.new_start_time %}
+                        <p><strong>Nowe godziny:</strong> {{ change_request.new_start_time|time:"H:i" }} - {{ change_request.new_end_time|time:"H:i" }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <strong>Uzasadnienie pracownika:</strong>
+                    </div>
+                    <div class="card-body">
+                        {{ change_request.reason|linebreaks }}
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="review_notes" class="form-label"><strong>Twoje notatki (opcjonalne):</strong></label>
+                        <textarea name="review_notes" id="review_notes" class="form-control" rows="3" 
+                                  placeholder="Dodaj komentarz do decyzji..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'pending_requests' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Wróć
+                        </a>
+                        <div>
+                            <button type="submit" name="action" value="reject" class="btn btn-danger me-2"
+                                    onclick="return confirm('Czy na pewno chcesz odrzucić ten wniosek?')">
+                                <i class="bi bi-x-circle"></i> Odrzuć
+                            </button>
+                            <button type="submit" name="action" value="approve" class="btn btn-success"
+                                    onclick="return confirm('Czy na pewno chcesz zaakceptować ten wniosek?')">
+                                <i class="bi bi-check-circle"></i> Zaakceptuj
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

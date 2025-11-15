@@ -1,0 +1,163 @@
+{% extends 'shift_manager/base.html' %}
+
+{% block title %}Panel - System Grafików{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Nadchodzące zmiany</h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_shifts %}
+                    {% for shift in upcoming_shifts %}
+                    <div class="card shift-card shift-{{ shift.shift_type }} mb-2">
+                        <div class="card-body py-2">
+                            <div class="row align-items-center">
+                                <div class="col-md-3">
+                                    <strong>{{ shift.date|date:"d.m.Y (D)" }}</strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="badge bg-secondary">{{ shift.get_shift_type_display }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <i class="bi bi-clock"></i> {{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <a href="{% url 'request_change_for_shift' shift.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i> Zmień
+                                    </a>
+                                </div>
+                            </div>
+                            {% if shift.notes %}
+                            <div class="row mt-1">
+                                <div class="col-12">
+                                    <small class="text-muted"><i class="bi bi-info-circle"></i> {{ shift.notes }}</small>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Brak zaplanowanych zmian w najbliższych 14 dniach.</p>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{% url 'schedule' %}" class="btn btn-primary">
+                        <i class="bi bi-calendar3"></i> Zobacz pełny grafik
+                    </a>
+                    <a href="{% url 'request_change' %}" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Nowy wniosek
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-person"></i> Twój profil</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Imię i nazwisko:</strong> {{ employee.user.get_full_name }}</p>
+                <p><strong>Stanowisko:</strong> {{ employee.position }}</p>
+                {% if employee.phone %}
+                <p><strong>Telefon:</strong> {{ employee.phone }}</p>
+                {% endif %}
+                {% if employee.supervisor %}
+                <p><strong>Przełożony:</strong> {{ employee.supervisor.user.get_full_name }}</p>
+                {% endif %}
+                {% if employee.is_supervisor %}
+                <span class="badge bg-warning text-dark">Przełożony</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Moje ostatnie wnioski</h5>
+            </div>
+            <div class="card-body">
+                {% if my_requests %}
+                    <div class="list-group list-group-flush">
+                        {% for request in my_requests %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ request.get_request_type_display }}</strong><br>
+                                    <small class="text-muted">{{ request.created_at|date:"d.m.Y H:i" }}</small>
+                                </div>
+                                <span class="status-badge status-{{ request.status }}">
+                                    {{ request.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-2">
+                        <a href="{% url 'my_requests' %}" class="btn btn-sm btn-outline-secondary">
+                            Zobacz wszystkie
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Brak wniosków</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if employee.is_supervisor and pending_requests %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Wnioski do rozpatrzenia ({{ pending_requests.count }})</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Pracownik</th>
+                                <th>Typ wniosku</th>
+                                <th>Data utworzenia</th>
+                                <th>Zmiana</th>
+                                <th>Akcja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for request in pending_requests %}
+                            <tr>
+                                <td>{{ request.employee.user.get_full_name }}</td>
+                                <td>{{ request.get_request_type_display }}</td>
+                                <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
+                                <td>
+                                    {% if request.shift %}
+                                        {{ request.shift.date|date:"d.m.Y" }} ({{ request.shift.get_shift_type_display }})
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'review_request' request.id %}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye"></i> Rozpatrz
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <a href="{% url 'pending_requests' %}" class="btn btn-warning">
+                    Zobacz wszystkie wnioski
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

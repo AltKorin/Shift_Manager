@@ -1,0 +1,164 @@
+{% extends 'shift_manager/base.html' %}
+
+{% block title %}Moje wnioski - System Grafików{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Moje wnioski</h5>
+    </div>
+    <div class="card-body">
+        {% if requests %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Typ wniosku</th>
+                        <th>Zmiana</th>
+                        <th>Data utworzenia</th>
+                        <th>Status</th>
+                        <th>Rozpatrzone przez</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in requests %}
+                    <tr>
+                        <td>{{ request.get_request_type_display }}</td>
+                        <td>
+                            {% if request.shift %}
+                                {{ request.shift.date|date:"d.m.Y" }}<br>
+                                <small class="text-muted">{{ request.shift.get_shift_type_display }}</small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>
+                            <span class="status-badge status-{{ request.status }}">
+                                {{ request.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if request.reviewed_by %}
+                                {{ request.reviewed_by.user.get_full_name }}<br>
+                                <small class="text-muted">{{ request.reviewed_at|date:"d.m.Y H:i" }}</small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-info" 
+                                    data-bs-toggle="modal" data-bs-target="#requestModal{{ request.id }}">
+                                <i class="bi bi-eye"></i> Szczegóły
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Nie masz jeszcze żadnych wniosków.</p>
+        {% endif %}
+
+        <div class="mt-3">
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Wróć do panelu
+            </a>
+            <a href="{% url 'request_change' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Nowy wniosek
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Modals with request details -->
+{% for request in requests %}
+<div class="modal fade" id="requestModal{{ request.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Szczegóły wniosku #{{ request.id }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Typ:</strong> {{ request.get_request_type_display }}<br>
+                    <strong>Status:</strong> 
+                    <span class="status-badge status-{{ request.status }}">
+                        {{ request.get_status_display }}
+                    </span>
+                </div>
+
+                {% if request.shift %}
+                <div class="card mb-3">
+                    <div class="card-header">Zmiana</div>
+                    <div class="card-body">
+                        {{ request.shift.date|date:"d.m.Y" }} - {{ request.shift.get_shift_type_display }}<br>
+                        {{ request.shift.start_time|time:"H:i" }} - {{ request.shift.end_time|time:"H:i" }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if request.request_type == 'swap' %}
+                <div class="card mb-3">
+                    <div class="card-header">Zamiana</div>
+                    <div class="card-body">
+                        {% if request.swap_with_employee %}
+                        <strong>Z:</strong> {{ request.swap_with_employee.user.get_full_name }}<br>
+                        {% endif %}
+                        {% if request.swap_shift %}
+                        <strong>Zmiana:</strong> {{ request.swap_shift.date|date:"d.m.Y" }} 
+                        ({{ request.swap_shift.get_shift_type_display }})
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if request.new_date or request.new_start_time %}
+                <div class="card mb-3">
+                    <div class="card-header">Nowe dane</div>
+                    <div class="card-body">
+                        {% if request.new_date %}
+                        <strong>Data:</strong> {{ request.new_date|date:"d.m.Y" }}<br>
+                        {% endif %}
+                        {% if request.new_shift_type %}
+                        <strong>Typ:</strong> {{ request.get_new_shift_type_display }}<br>
+                        {% endif %}
+                        {% if request.new_start_time %}
+                        <strong>Godziny:</strong> {{ request.new_start_time|time:"H:i" }} - {{ request.new_end_time|time:"H:i" }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="card mb-3">
+                    <div class="card-header">Uzasadnienie</div>
+                    <div class="card-body">
+                        {{ request.reason|linebreaks }}
+                    </div>
+                </div>
+
+                {% if request.reviewed_by %}
+                <div class="card mb-3">
+                    <div class="card-header">Decyzja przełożonego</div>
+                    <div class="card-body">
+                        <strong>Rozpatrzono przez:</strong> {{ request.reviewed_by.user.get_full_name }}<br>
+                        <strong>Data:</strong> {{ request.reviewed_at|date:"d.m.Y H:i" }}<br>
+                        {% if request.review_notes %}
+                        <strong>Notatki:</strong><br>
+                        {{ request.review_notes|linebreaks }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
