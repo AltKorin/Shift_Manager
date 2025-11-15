@@ -71,7 +71,7 @@
                     </li>
                     {% endif %}
 
-                    {% if employee.is_supervisor %}
+                    {% if employee.is_supervisor_like %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'pending_requests' %}">
                             <i class="bi bi-clipboard-check"></i> Do rozpatrzenia
@@ -89,11 +89,19 @@
 
                 </ul>
                 <div class="navbar-text text-white">
-                    <i class="bi bi-person-circle"></i> {{ user.get_full_name }}
-                    {% if employee.is_supervisor %}
-                    <span class="badge bg-warning text-dark ms-2">Przełożony</span>
-                    {% endif %}
-                </div>
+    <i class="bi bi-person-circle"></i> {{ user.get_full_name }}
+
+    {% if employee.department %}
+        <span class="badge bg-light text-dark ms-2">
+            {{ employee.department.short_name }}
+        </span>
+    {% endif %}
+
+    {% if employee.is_supervisor_like %}
+    <span class="badge bg-warning text-dark">Przełożony</span>
+    {% endif %}
+</div>
+
                 <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm ms-3">
                     <i class="bi bi-box-arrow-right"></i> Wyloguj
                 </a>

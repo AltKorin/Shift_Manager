@@ -1,29 +1,84 @@
-{% extends 'shift_manager/base.html' %}
+{% extends "shift_manager/base.html" %}
 
-{% block title %}Grafik - System Grafików{% endblock %}
+{% block title %}Grafik tygodniowy - System Grafików{% endblock %}
 
 {% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3><i class="bi bi-calendar3"></i> Grafik tygodniowy</h3>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <label for="id_date" class="form-label">Tydzień od:</label>
+        <input type="date"
+               id="id_date"
+               name="date"
+               class="form-control"
+               value="{{ start_of_week|date:'Y-m-d' }}">
+    </div>
+
+    {% if departments %}
+    <div class="col-auto">
+        <label for="id_department" class="form-label">Dział:</label>
+        <select name="department" id="id_department" class="form-select">
+            <option value="">
+                (domyślnie:
+                {% if employee.department %}
+                    {{ employee.department.name }}
+                {% else %}
+                    wszyscy
+                {% endif %}
+                )
+            </option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}"
+                {% if selected_department_id == dept.id|stringformat:"s" %}selected{% endif %}>
+                {{ dept.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <div class="col-auto align-self-end">
+        <button type="submit" class="btn btn-primary">
+            Filtruj
+        </button>
+    </div>
+</form>
+
+{% if selected_department %}
+    <p class="text-muted">
+        <i class="bi bi-people-fill"></i>
+        Widok grafiku dla działu: <strong>{{ selected_department.name }}</strong>
+    </p>
+{% endif %}
+
 <div class="card">
     <div class="card-header bg-primary text-white">
         <div class="row align-items-center">
             <div class="col-md-4">
-                <a href="?date={{ prev_week|date:'Y-m-d' }}" class="btn btn-light btn-sm">
+                <a href="?date={{ prev_week|date:'Y-m-d' }}{% if selected_department_id %}&department={{ selected_department_id }}{% endif %}"
+                   class="btn btn-light btn-sm">
                     <i class="bi bi-chevron-left"></i> Poprzedni tydzień
                 </a>
             </div>
             <div class="col-md-4 text-center">
                 <h5 class="mb-0">
-                    <i class="bi bi-calendar3"></i> 
+                    <i class="bi bi-calendar3"></i>
                     Tydzień {{ start_of_week|date:"d.m" }} - {{ end_of_week|date:"d.m.Y" }}
                 </h5>
             </div>
             <div class="col-md-4 text-end">
-                <a href="?date={{ next_week|date:'Y-m-d' }}" class="btn btn-light btn-sm">
+                <a href="?date={{ next_week|date:'Y-m-d' }}{% if selected_department_id %}&department={{ selected_department_id }}{% endif %}"
+                   class="btn btn-light btn-sm">
                     Następny tydzień <i class="bi bi-chevron-right"></i>
                 </a>
             </div>
         </div>
     </div>
+
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-bordered mb-0">
@@ -40,7 +95,7 @@
                             <strong>{{ date|date:"l" }}</strong><br>
                             {{ date|date:"d.m.Y" }}
                             {% if date == today %}
-                            <span class="badge bg-primary">Dzisiaj</span>
+                                <span class="badge bg-primary">Dzisiaj</span>
                             {% endif %}
                         </td>
                         <td>
@@ -49,42 +104,59 @@
                                 <div class="card shift-card shift-{{ shift.shift_type }} mb-2">
                                     <div class="card-body py-2">
                                         <div class="row align-items-center">
-                                            {% if employee.is_supervisor %}
+
+                                            {% if employee.is_supervisor_like %}
                                             <div class="col-md-3">
                                                 <strong>{{ shift.employee.user.get_full_name }}</strong>
+                                                {% if shift.employee.department %}
+                                                    <span class="badge bg-light text-dark ms-1">
+                                                        {{ shift.employee.department.short_name }}
+                                                    </span>
+                                                {% endif %}
                                             </div>
                                             {% endif %}
+
                                             <div class="col-md-3">
-                                                <span class="badge bg-secondary">{{ shift.get_shift_type_display }}</span>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <i class="bi bi-clock"></i> {{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}
+                                                <span class="badge bg-secondary">
+                                                    {{ shift.get_shift_type_display }}
+                                                </span>
                                             </div>
 
-                                            {% if employee.is_supervisor %}
+                                            <div class="col-md-3">
+                                                <i class="bi bi-clock"></i>
+                                                {{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}
+                                            </div>
+
+                                            {% if employee.is_supervisor_like %}
                                                 <div class="col-md-3 text-end">
-                                                    {# przełożony może usunąć każdą zmianę w swoim zespole #}
                                                     {% if shift.employee == employee %}
-                                                    <a href="{% url 'request_change_for_shift' shift.id %}" class="btn btn-sm btn-outline-primary">
+                                                    <a href="{% url 'request_change_for_shift' shift.id %}"
+                                                       class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-pencil"></i> Zmień
                                                     </a>
                                                     {% endif %}
-                                                    <a href="{% url 'delete_shift' shift.id %}" class="btn btn-sm btn-outline-danger ms-1">
+                                                    <a href="{% url 'delete_shift' shift.id %}"
+                                                       class="btn btn-sm btn-outline-danger ms-1">
                                                         <i class="bi bi-trash"></i>
                                                     </a>
                                                 </div>
                                             {% elif shift.employee == employee %}
                                                 <div class="col-md-3 text-end">
-                                                    <a href="{% url 'request_change_for_shift' shift.id %}" class="btn btn-sm btn-outline-primary">
+                                                    <a href="{% url 'request_change_for_shift' shift.id %}"
+                                                       class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-pencil"></i> Zmień
                                                     </a>
                                                 </div>
                                             {% endif %}
+
                                         </div>
+
                                         {% if shift.notes %}
                                         <div class="row mt-1">
                                             <div class="col-12">
-                                                <small class="text-muted"><i class="bi bi-info-circle"></i> {{ shift.notes }}</small>
+                                                <small class="text-muted">
+                                                    <i class="bi bi-info-circle"></i> {{ shift.notes }}
+                                                </small>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -101,12 +173,13 @@
             </table>
         </div>
     </div>
+
     <div class="card-footer">
         <div class="d-flex justify-content-between">
             <div>
                 <strong>Legenda:</strong>
                 <span class="badge bg-warning text-dark ms-2">Poranna</span>
-                <span class="badge bg-danger text-dark ms-2" style="background-color: #fd7e14 !important;">Popołudniowa</span>
+                <span class="badge text-dark ms-2" style="background-color: #fd7e14 !important;">Popołudniowa</span>
                 <span class="badge text-white ms-2" style="background-color: #6610f2 !important;">Nocna</span>
                 <span class="badge text-white ms-2" style="background-color: #20c997 !important;">Cały dzień</span>
             </div>
@@ -118,4 +191,5 @@
         </div>
     </div>
 </div>
+
 {% endblock %}

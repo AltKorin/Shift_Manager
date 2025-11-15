@@ -3,11 +3,56 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Nazwa działu")
+    short_name = models.CharField(max_length=30, unique=True, verbose_name="Skrót (np. 'Kuchnia')")
+    color = models.CharField(
+        max_length=7,
+        default="#0d6efd",
+        verbose_name="Kolor",
+        help_text="Kolor do oznaczania zmian, np. #0d6efd"
+    )
+
+    class Meta:
+        verbose_name = "Dział"
+        verbose_name_plural = "Działy"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
 class Employee(models.Model):
     """Pracownik z powiązaniem do użytkownika Django"""
+
+    ROLE_CHOICES = [
+        ('staff', 'Pracownik'),
+        ('supervisor', 'Brygadzista / Lider'),
+        ('manager', 'Kierownik'),
+        ('director', 'Dyrektor'),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employee_profile')
     phone = models.CharField(max_length=20, blank=True)
     position = models.CharField(max_length=100, verbose_name="Stanowisko")
+
+    # NOWE POLE: dział
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='employees',
+        verbose_name="Dział"
+    )
+
+    # NOWE POLE: rozszerzona rola
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default='staff',
+        verbose_name="Rola"
+    )
+
     supervisor = models.ForeignKey(
         'self', 
         on_delete=models.SET_NULL, 
@@ -16,14 +61,20 @@ class Employee(models.Model):
         related_name='subordinates',
         verbose_name="Przełożony"
     )
+
     is_supervisor = models.BooleanField(default=False, verbose_name="Czy przełożony")
-    
+
     class Meta:
         verbose_name = "Pracownik"
         verbose_name_plural = "Pracownicy"
-    
+
     def __str__(self):
         return f"{self.user.get_full_name()} - {self.position}"
+
+    @property
+    def is_supervisor_like(self):
+        """Spójna logika uprawnień — działa na starym i nowym systemie."""
+        return self.role in ('supervisor', 'manager', 'director') or self.is_supervisor
 
 
 class Shift(models.Model):

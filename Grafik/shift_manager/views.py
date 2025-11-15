@@ -4,12 +4,13 @@ from django.contrib import messages
 from django.db.models import Q
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .models import Employee, Shift, ShiftChangeRequest
+from .models import Employee, Shift, ShiftChangeRequest, Department
 from .forms import ShiftChangeRequestForm, EmployeeProfileForm, ShiftForm
 from django.contrib.auth import logout
 from .forms import ShiftForm          # ← formularz do tworzenia zmiany
 from .models import ShiftHistory      # ← model historii
 from .models import log_shift_history # ← helper do logowania historii (jeśli w models.py)
+from datetime import datetime, timedelta
 
 @login_required
 def app_logout(request):
@@ -41,7 +42,7 @@ def dashboard(request):
     
     # Jeśli jestem przełożonym - wnioski do rozpatrzenia
     pending_requests = None
-    if employee.is_supervisor:
+    if employee.is_supervisor_like:
         pending_requests = ShiftChangeRequest.objects.filter(
             employee__supervisor=employee,
             status='pending'
@@ -59,10 +60,10 @@ def dashboard(request):
 
 @login_required
 def schedule_view(request):
-    """Widok grafiku - kalendarz"""
+    """Widok grafiku - kalendarz tygodniowy z uwzględnieniem ról i działów"""
     employee = request.user.employee_profile
-    
-    # Pobierz datę z parametru lub użyj bieżącego tygodnia
+
+    # DATA BAZOWA
     date_str = request.GET.get('date')
     if date_str:
         try:
@@ -71,37 +72,73 @@ def schedule_view(request):
             current_date = timezone.now().date()
     else:
         current_date = timezone.now().date()
-    
-    # Znajdź poniedziałek tego tygodnia
+
+    # Poniedziałek tego tygodnia i niedziela
     start_of_week = current_date - timedelta(days=current_date.weekday())
     end_of_week = start_of_week + timedelta(days=6)
-    
-    # Pobierz wszystkie zmiany w tym tygodniu
-    if employee.is_supervisor:
-        # Przełożony widzi wszystkich swoich podwładnych
-        shifts = Shift.objects.filter(
-            Q(employee__supervisor=employee) | Q(employee=employee),
-            date__gte=start_of_week,
-            date__lte=end_of_week
-        ).select_related('employee__user').order_by('date', 'start_time')
+
+    # FILTR DZIAŁU (dla kadry)
+    selected_department_id = request.GET.get('department')
+    selected_department = None
+
+    # Bazowy queryset na zmiany
+    shifts_qs = Shift.objects.filter(
+        date__gte=start_of_week,
+        date__lte=end_of_week,
+    ).select_related('employee__user', 'employee__department')
+
+    # LOGIKA WIDOCZNOŚCI W ZALEŻNOŚCI OD ROLI
+    if not employee.is_supervisor_like:
+        # Zwykły pracownik → tylko swoje zmiany
+        shifts_qs = shifts_qs.filter(employee=employee)
+
     else:
-        # Pracownik widzi tylko swoje zmiany
-        shifts = Shift.objects.filter(
-            employee=employee,
-            date__gte=start_of_week,
-            date__lte=end_of_week
-        ).order_by('date', 'start_time')
-    
-    # Organizuj zmiany po dniach
+        # supervisor / manager / director
+        # Dla supervisorów: tylko ich zespół + oni sami
+        if employee.role == 'supervisor':
+            shifts_qs = shifts_qs.filter(
+                Q(employee=employee) | Q(employee__supervisor=employee)
+            )
+
+        # manager / director
+        elif employee.role in ('manager', 'director'):
+            # jeśli wybrano dział w filtrze → ten dział
+            if selected_department_id:
+                shifts_qs = shifts_qs.filter(employee__department_id=selected_department_id)
+                try:
+                    selected_department = Department.objects.get(id=selected_department_id)
+                except Department.DoesNotExist:
+                    selected_department = None
+            else:
+                # jeśli manager ma własny dział, domyślnie pokazujemy jego dział
+                if employee.department:
+                    shifts_qs = shifts_qs.filter(employee__department=employee.department)
+                    selected_department = employee.department
+                # jeśli nie ma działu (np. dyrektor), pokazuje wszystko
+                else:
+                    pass
+
+        else:
+            # fallback – traktuj jak supervisor
+            shifts_qs = shifts_qs.filter(
+                Q(employee=employee) | Q(employee__supervisor=employee)
+            )
+
+    shifts_qs = shifts_qs.order_by('date', 'start_time', 'employee__user__last_name')
+
+    # ORGANIZACJA PO DNIACH
     week_schedule = {}
     current = start_of_week
     while current <= end_of_week:
         week_schedule[current] = {
             'date': current,
-            'shifts': [s for s in shifts if s.date == current]
+            'shifts': [s for s in shifts_qs if s.date == current]
         }
         current += timedelta(days=1)
-    
+
+    # Lista działów tylko dla kadry
+    departments = Department.objects.all().order_by('name') if employee.is_supervisor_like else None
+
     context = {
         'employee': employee,
         'week_schedule': week_schedule,
@@ -109,8 +146,12 @@ def schedule_view(request):
         'end_of_week': end_of_week,
         'prev_week': start_of_week - timedelta(days=7),
         'next_week': start_of_week + timedelta(days=7),
+        'departments': departments,
+        'selected_department': selected_department,
+        'selected_department_id': selected_department_id or '',
+        'today': timezone.now().date(),
     }
-    
+
     return render(request, 'shift_manager/schedule.html', context)
 
 
@@ -351,7 +392,7 @@ def shift_history(request):
         messages.error(request, "Brak profilu pracownika.")
         return redirect('create_employee_profile')
 
-    if employee.is_supervisor:
+    if employee.is_supervisor_like:
         history = ShiftHistory.objects.select_related('employee', 'changed_by').all()
     else:
         history = ShiftHistory.objects.filter(

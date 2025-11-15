@@ -70,7 +70,7 @@
                 {% if employee.supervisor %}
                 <p><strong>Przełożony:</strong> {{ employee.supervisor.user.get_full_name }}</p>
                 {% endif %}
-                {% if employee.is_supervisor %}
+                {% if employee.is_supervisor_like %}
                 <span class="badge bg-warning text-dark">Przełożony</span>
                 {% endif %}
             </div>
@@ -110,7 +110,7 @@
     </div>
 </div>
 
-{% if employee.is_supervisor and pending_requests %}
+{% if employee.is_supervisor_like and pending_requests %}
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">
