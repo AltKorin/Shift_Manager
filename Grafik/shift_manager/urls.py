@@ -12,4 +12,6 @@ urlpatterns = [
     path('create-profile/', views.create_employee_profile, name='create_employee_profile'),
     path('shifts/new/', views.create_shift, name='create_shift'),
     path('shifts/<int:shift_id>/delete/', views.delete_shift, name='delete_shift'),
+    path('history/', views.shift_history, name='shift_history'),
+
 ]

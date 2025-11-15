@@ -7,6 +7,9 @@ from datetime import datetime, timedelta
 from .models import Employee, Shift, ShiftChangeRequest
 from .forms import ShiftChangeRequestForm, EmployeeProfileForm, ShiftForm
 from django.contrib.auth import logout
+from .forms import ShiftForm          # ← formularz do tworzenia zmiany
+from .models import ShiftHistory      # ← model historii
+from .models import log_shift_history # ← helper do logowania historii (jeśli w models.py)
 
 @login_required
 def app_logout(request):
@@ -277,11 +280,11 @@ def create_shift(request):
         )
 
         if form.is_valid():
-            shift = form.save()
-            messages.success(
-                request,
-                f"Utworzono zmianę dla {shift.employee.user.get_full_name()} na {shift.date}."
-            )
+            shift = form.save(commit=False)
+            # WSTRZYKUJEMY użytkownika do instancji przed save
+            shift._changed_by = request.user
+            shift.save()
+            messages.success(request, f"Utworzono zmianę dla {shift.employee.user.get_full_name()} na {shift.date}.")
             return redirect('schedule')
         else:
             # tymczasowo: pokaż błędy walidacji
@@ -297,6 +300,7 @@ def create_shift(request):
         'form': form,
         'employee': employee,
     })
+    
 @login_required
 def delete_shift(request, shift_id):
     """Usuwanie zmiany – tylko dla przełożonych (swoich ludzi / siebie)"""
@@ -318,6 +322,13 @@ def delete_shift(request, shift_id):
         return redirect('schedule')
 
     if request.method == 'POST':
+        log_shift_history(
+            action='deleted',
+            shift=shift,
+            changed_by=request.user,
+            source='manual',
+            extra_info="Usunięto z widoku grafiku"
+        )
         date = shift.date
         staff_name = shift.employee.user.get_full_name()
         shift.delete()
@@ -329,5 +340,27 @@ def delete_shift(request, shift_id):
 
     return render(request, 'shift_manager/delete_shift.html', {
         'shift': shift,
+        'employee': employee,
+    })
+
+@login_required
+def shift_history(request):
+    try:
+        employee = request.user.employee_profile
+    except Employee.DoesNotExist:
+        messages.error(request, "Brak profilu pracownika.")
+        return redirect('create_employee_profile')
+
+    if employee.is_supervisor:
+        history = ShiftHistory.objects.select_related('employee', 'changed_by').all()
+    else:
+        history = ShiftHistory.objects.filter(
+            employee=employee
+        ).select_related('employee', 'changed_by')
+
+    history = history.order_by('-created_at')
+
+    return render(request, 'shift_manager/shift_history.html', {
+        'history': history,
         'employee': employee,
     })
