@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  shift_manager:
+    build: ./Grafik
+    container_name: shift_manager
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./Grafik:/app
+    ports:
+      - "8000:8000"
