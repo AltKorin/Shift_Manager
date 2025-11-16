@@ -19,11 +19,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%*6$00#kf(8rq=ebrvchh2#rmkxf#5pgy!c8^b##_en9*jy&$h'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "INSECURE_DEV_KEY")
+DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = ["*"]
 
@@ -31,6 +28,15 @@ CSRF_TRUSTED_ORIGINS = [
     "https://sudomie.com",
     "https://www.sudomie.com",
 ]
+
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True   # dla starszych przeglądarek, nie zaszkodzi
+X_FRAME_OPTIONS = "DENY"
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Application definition
 
