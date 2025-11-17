@@ -1,6 +1,6 @@
 {% extends "shift_manager/base.html" %}
 
-{% block title %}Grafik tygodniowy - System Grafików{% endblock %}
+{% block title %}Grafik tygodniowy{% endblock %}
 
 {% block content %}
 
@@ -23,13 +23,11 @@
         <label for="id_department" class="form-label">Dział:</label>
         <select name="department" id="id_department" class="form-select">
             <option value="">
-                (domyślnie:
                 {% if employee.department %}
-                    {{ employee.department.name }}
+                    (domyślnie: {{ employee.department.name }})
                 {% else %}
-                    wszyscy
+                    (wszyscy)
                 {% endif %}
-                )
             </option>
             {% for dept in departments %}
             <option value="{{ dept.id }}"
@@ -51,7 +49,8 @@
 {% if selected_department %}
     <p class="text-muted">
         <i class="bi bi-people-fill"></i>
-        Widok grafiku dla działu: <strong>{{ selected_department.name }}</strong>
+        Widok grafiku dla działu:
+        <strong>{{ selected_department.name }}</strong>
     </p>
 {% endif %}
 
@@ -65,10 +64,7 @@
                 </a>
             </div>
             <div class="col-md-4 text-center">
-                <h5 class="mb-0">
-                    <i class="bi bi-calendar3"></i>
-                    Tydzień {{ start_of_week|date:"d.m" }} - {{ end_of_week|date:"d.m.Y" }}
-                </h5>
+                <strong>{{ start_of_week|date:"d.m.Y" }} → {{ end_of_week|date:"d.m.Y" }}</strong>
             </div>
             <div class="col-md-4 text-end">
                 <a href="?date={{ next_week|date:'Y-m-d' }}{% if selected_department_id %}&department={{ selected_department_id }}{% endif %}"
@@ -79,116 +75,107 @@
         </div>
     </div>
 
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-bordered mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width: 150px;">Data</th>
-                        <th>Zmiany</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for date, day_data in week_schedule.items %}
-                    <tr>
-                        <td class="align-top">
-                            <strong>{{ date|date:"l" }}</strong><br>
-                            {{ date|date:"d.m.Y" }}
-                            {% if date == today %}
-                                <span class="badge bg-primary">Dzisiaj</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if day_data.shifts %}
-                                {% for shift in day_data.shifts %}
-                                <div class="card shift-card shift-{{ shift.shift_type }} mb-2">
-                                    <div class="card-body py-2">
-                                        <div class="row align-items-center">
+    <div class="card-body">
 
-                                            {% if employee.is_supervisor_like %}
-                                            <div class="col-md-3">
-                                                <strong>{{ shift.employee.user.get_full_name }}</strong>
-                                                {% if shift.employee.department %}
-                                                    <span class="badge bg-light text-dark ms-1">
-                                                        {{ shift.employee.department.short_name }}
-                                                    </span>
-                                                {% endif %}
-                                            </div>
-                                            {% endif %}
+        {% for day, info in week_schedule.items %}
+        <div class="mb-3 p-2 border rounded">
+            <h5 class="mb-2">
+                <i class="bi bi-calendar-date"></i>
+                {{ day|date:"l, d.m.Y" }}
+            </h5>
 
-                                            <div class="col-md-3">
-                                                <span class="badge bg-secondary">
-                                                    {{ shift.get_shift_type_display }}
-                                                </span>
-                                            </div>
+            {% if info.shifts %}
+                {% for shift in info.shifts %}
+                <div class="card shift-card shift-{{ shift.shift_type }} mb-2">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
 
-                                            <div class="col-md-3">
-                                                <i class="bi bi-clock"></i>
-                                                {{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i" }}
-                                            </div>
+                            <div class="col-md-3">
+                                <strong>{{ shift.employee.user.get_full_name }}</strong><br>
+                                <small class="text-muted">
+                                    {{ shift.employee.position }}
+                                </small>
+                            </div>
 
-                                            {% if employee.is_supervisor_like %}
-                                                <div class="col-md-3 text-end">
-                                                    {% if shift.employee == employee %}
-                                                    <a href="{% url 'request_change_for_shift' shift.id %}"
-                                                       class="btn btn-sm btn-outline-primary">
-                                                        <i class="bi bi-pencil"></i> Zmień
-                                                    </a>
-                                                    {% endif %}
-                                                    <a href="{% url 'delete_shift' shift.id %}"
-                                                       class="btn btn-sm btn-outline-danger ms-1">
-                                                        <i class="bi bi-trash"></i>
-                                                    </a>
-                                                </div>
-                                            {% elif shift.employee == employee %}
-                                                <div class="col-md-3 text-end">
-                                                    <a href="{% url 'request_change_for_shift' shift.id %}"
-                                                       class="btn btn-sm btn-outline-primary">
-                                                        <i class="bi bi-pencil"></i> Zmień
-                                                    </a>
-                                                </div>
-                                            {% endif %}
+                            <div class="col-md-3">
+                                <span class="badge bg-secondary">
+                                    {{ shift.get_shift_type_display }}
+                                </span>
+                            </div>
 
-                                        </div>
+                            <div class="col-md-3">
+                                <i class="bi bi-clock"></i>
+                                {{ shift.start_time|time:"H:i" }} – {{ shift.end_time|time:"H:i" }}
+                            </div>
 
-                                        {% if shift.notes %}
-                                        <div class="row mt-1">
-                                            <div class="col-12">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-info-circle"></i> {{ shift.notes }}
-                                                </small>
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <span class="text-muted">Brak zmian</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            <div class="col-md-3">
+                                <span class="badge
+                                    {% if shift.status == 'confirmed' %}bg-success
+                                    {% elif shift.status == 'absence' %}bg-warning text-dark
+                                    {% elif shift.status == 'sick' %}bg-danger
+                                    {% elif shift.status == 'replacement' %}bg-info text-dark
+                                    {% else %}bg-secondary
+                                    {% endif %}
+                                ">
+                                    {{ shift.get_status_display }}
+                                </span>
+                            </div>
+
+                        </div>
+
+                        {% if shift.notes %}
+                        <div class="row text-muted mt-1">
+                            <div class="col-12">
+                                <small><i class="bi bi-info-circle"></i> {{ shift.notes }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if employee.is_supervisor_like %}
+                        <div class="mt-2">
+
+                            <div class="btn-group btn-group-sm">
+
+                                <a href="{% url 'update_shift_status' shift.id 'confirmed' %}"
+                                   class="btn btn-outline-success" title="Potwierdzona">
+                                   ✔
+                                </a>
+
+                                <a href="{% url 'update_shift_status' shift.id 'absence' %}"
+                                   class="btn btn-outline-warning" title="Nieobecność">
+                                   ⚠
+                                </a>
+
+                                <a href="{% url 'update_shift_status' shift.id 'sick' %}"
+                                   class="btn btn-outline-danger" title="L4">
+                                   🤒
+                                </a>
+
+                                <a href="{% url 'update_shift_status' shift.id 'replacement' %}"
+                                   class="btn btn-outline-info" title="Potrzebne zastępstwo">
+                                   🔄
+                                </a>
+
+                            </div>
+
+                            <a href="{% url 'delete_shift' shift.id %}"
+                               class="btn btn-outline-danger btn-sm ms-2">
+                               🗑 Usuń
+                            </a>
+
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">Brak zmian tego dnia.</p>
+            {% endif %}
+
         </div>
-    </div>
+        {% endfor %}
 
-    <div class="card-footer">
-        <div class="d-flex justify-content-between">
-            <div>
-                <strong>Legenda:</strong>
-                <span class="badge bg-warning text-dark ms-2">Poranna</span>
-                <span class="badge text-dark ms-2" style="background-color: #fd7e14 !important;">Popołudniowa</span>
-                <span class="badge text-white ms-2" style="background-color: #6610f2 !important;">Nocna</span>
-                <span class="badge text-white ms-2" style="background-color: #20c997 !important;">Cały dzień</span>
-            </div>
-            <div>
-                <a href="{% url 'request_change' %}" class="btn btn-success">
-                    <i class="bi bi-plus-circle"></i> Nowy wniosek
-                </a>
-            </div>
-        </div>
     </div>
 </div>
 

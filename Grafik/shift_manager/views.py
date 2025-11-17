@@ -459,3 +459,19 @@ def create_employee(request):
         "form": form,
         "employee": employee,
     })
+@login_required
+def update_shift_status(request, shift_id, new_status):
+    employee = request.user.employee_profile
+    shift = get_object_or_404(Shift, id=shift_id)
+
+    # tylko przełożony albo właściciel zmiany
+    if not employee.is_supervisor_like and shift.employee != employee:
+        messages.error(request, "Brak uprawnień.")
+        return redirect("schedule")
+
+    shift.status = new_status
+    shift._changed_by = request.user
+    shift.save()
+
+    messages.success(request, f"Status zmiany zaktualizowano na: {shift.get_status_display()}")
+    return redirect("schedule")
