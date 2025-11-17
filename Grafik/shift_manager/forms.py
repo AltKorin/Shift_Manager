@@ -1,5 +1,5 @@
 from django import forms
-from .models import ShiftChangeRequest, Shift, Employee
+from .models import ShiftChangeRequest, Shift, Employee, Department
 
 class EmployeeProfileForm(forms.ModelForm):
     class Meta:
@@ -153,3 +153,39 @@ class ReviewRequestForm(forms.Form):
         required=False,
         label='Notatki'
     )
+class EmployeeCreateForm(forms.Form):
+    first_name = forms.CharField(max_length=50, label="Imię")
+    last_name = forms.CharField(max_length=50, label="Nazwisko")
+    username = forms.CharField(max_length=50, label="Login")
+    phone = forms.CharField(max_length=20, required=False, label="Telefon")
+
+    position = forms.CharField(max_length=100, label="Stanowisko")
+    department = forms.ModelChoiceField(queryset=Department.objects.all(), label="Dział")
+
+    role = forms.ChoiceField(
+        choices=[
+            ("staff", "Pracownik"),
+            ("supervisor", "Lider"),
+            ("manager", "Manager"),
+            ("director", "Dyrektor"),
+        ],
+        label="Rola w systemie"
+    )
+
+    supervisor = forms.ModelChoiceField(
+        queryset=Employee.objects.all(),
+        required=False,
+        label="Przełożony"
+    )
+
+    password = forms.CharField(
+        max_length=50,
+        required=False,
+        label="Hasło początkowe (opcjonalne)"
+    )
+
+    def clean_username(self):
+        username = self.cleaned_data["username"]
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError("Taki login już istnieje.")
+        return username

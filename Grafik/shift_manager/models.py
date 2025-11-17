@@ -80,11 +80,25 @@ class Employee(models.Model):
 class Shift(models.Model):
     """Zmiana pracownika"""
     SHIFT_TYPES = [
-        ('morning', 'Poranna (6:00-14:00)'),
-        ('afternoon', 'Popołudniowa (14:00-22:00)'),
-        ('night', 'Nocna (22:00-6:00)'),
-        ('full', 'Cały dzień (8:00-16:00)'),
+        ('morning', 'Poranna'),
+        ('afternoon', 'Popołudniowa'),
+        ('night', 'Nocna'),
+        ('full', 'Cały dzień'),
     ]
+    STATUS_CHOICES = [
+        ("planned", "Zaplanowana"),
+        ("confirmed", "Potwierdzona"),
+        ("absence", "Nieobecność"),
+        ("sick", "L4"),
+        ("replacement", "Zastępstwo potrzebne"),
+    ]
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="planned",
+        verbose_name="Status"
+    )
     
     employee = models.ForeignKey(
         'Employee',
@@ -106,7 +120,7 @@ class Shift(models.Model):
     class Meta:
         verbose_name = "Zmiana"
         verbose_name_plural = "Zmiany"
-        ordering = ['-date', 'start_time']
+        ordering = ['-date', 'status', 'start_time']
     
     def __str__(self):
         return f"{self.employee.user.get_full_name()} - {self.date} ({self.get_shift_type_display()})"

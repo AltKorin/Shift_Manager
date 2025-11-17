@@ -13,5 +13,6 @@ urlpatterns = [
     path('shifts/new/', views.create_shift, name='create_shift'),
     path('shifts/<int:shift_id>/delete/', views.delete_shift, name='delete_shift'),
     path('history/', views.shift_history, name='shift_history'),
+    path('employees/create/', views.create_employee, name='create_employee'),
 
 ]

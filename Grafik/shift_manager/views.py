@@ -4,13 +4,10 @@ from django.contrib import messages
 from django.db.models import Q
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .models import Employee, Shift, ShiftChangeRequest, Department
-from .forms import ShiftChangeRequestForm, EmployeeProfileForm, ShiftForm
+from django.contrib.auth.models import User
 from django.contrib.auth import logout
-from .forms import ShiftForm          # ← formularz do tworzenia zmiany
-from .models import ShiftHistory      # ← model historii
-from .models import log_shift_history # ← helper do logowania historii (jeśli w models.py)
-from datetime import datetime, timedelta
+from .models import Employee, Shift, ShiftChangeRequest, Department, ShiftHistory, log_shift_history
+from .forms import ShiftChangeRequestForm, EmployeeProfileForm, ShiftForm, EmployeeCreateForm
 
 @login_required
 def app_logout(request):
@@ -404,4 +401,61 @@ def shift_history(request):
     return render(request, 'shift_manager/shift_history.html', {
         'history': history,
         'employee': employee,
+    })
+    
+@login_required
+def create_employee(request):
+    """Tworzenie nowego pracownika (HR-lite)"""
+    employee = request.user.employee_profile
+
+    if not employee.is_supervisor_like:
+        messages.error(request, "Brak uprawnień.")
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        form = EmployeeCreateForm(request.POST)
+
+        if form.is_valid():
+            data = form.cleaned_data
+
+            # 1. Tworzymy użytkownika Django
+            user = User.objects.create(
+                username=data["username"],
+                first_name=data["first_name"],
+                last_name=data["last_name"]
+            )
+
+            # hasło
+            raw_pass = data["password"] or "start123"
+            user.set_password(raw_pass)
+            user.save()
+
+            # 2. Tworzymy Employee
+            new_emp = Employee.objects.create(
+                user=user,
+                phone=data["phone"],
+                position=data["position"],
+                department=data["department"],
+                supervisor=data["supervisor"],
+                role=data["role"],
+                is_supervisor=(data["role"] != "staff")
+            )
+
+            messages.success(request, f"Pracownik {user.get_full_name()} został utworzony.")
+            return redirect("dashboard")
+
+    else:
+        form = EmployeeCreateForm()
+
+        # supervisor widzi tylko swoje działy
+        if employee.role == "supervisor":
+            form.fields["department"].queryset = Department.objects.filter(id=employee.department.id)
+            form.fields["supervisor"].queryset = Employee.objects.filter(id=employee.id)
+        else:
+            # manager/director widzi wszystkich
+            form.fields["supervisor"].queryset = Employee.objects.all()
+
+    return render(request, "shift_manager/create_employee.html", {
+        "form": form,
+        "employee": employee,
     })

@@ -1,28 +1,30 @@
-{% extends 'shift_manager/base.html' %}
+{% extends "shift_manager/base.html" %}
 
-{% block title %}Utwórz profil pracownika{% endblock %}
+{% block title %}Nowy pracownik{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card mt-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Utwórz profil pracownika</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted">
-                    Twój użytkownik nie ma jeszcze przypisanego profilu pracownika.
-                    Uzupełnij dane, aby korzystać z systemu grafików.
-                </p>
-                <form method="post">
-                    {% csrf_token %}
-                    {{ form.as_p }}
-                    <button type="submit" class="btn btn-primary">
-                        Zapisz profil
-                    </button>
-                </form>
-            </div>
-        </div>
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Dodaj nowego pracownika</h5>
     </div>
+
+    <form method="post" class="card-body">
+        {% csrf_token %}
+        <div class="row">
+            {% for field in form %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="text-danger small">{{ field.errors }}</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <button class="btn btn-success">
+            <i class="bi bi-person-plus"></i> Utwórz pracownika
+        </button>
+    </form>
 </div>
 {% endblock %}
